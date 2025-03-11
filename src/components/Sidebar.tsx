@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import ThemeToggle from "./ThemeToggle";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,6 +10,34 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen, toggleSidebar }: SidebarProps) => {
   const [language, setLanguage] = useState("English");
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const languageDropdownRef = useRef<HTMLDivElement>(null);
+
+  const languages = [
+    "English",
+    "Hindi",
+    "Tamil",
+    "Telugu",
+    "Bengali",
+    "Marathi",
+  ];
+
+  // Close the dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        languageDropdownRef.current &&
+        !languageDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowLanguageDropdown(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <div
@@ -97,14 +125,42 @@ const Sidebar = ({ isOpen, toggleSidebar }: SidebarProps) => {
       {/* Language selector at bottom */}
       <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
         {isOpen ? (
-          <div className="flex items-center px-4 justify-center text-gray-600 dark:text-gray-300">
+          <div
+            className="flex items-center px-4 justify-center text-gray-600 dark:text-gray-300 relative"
+            ref={languageDropdownRef}
+          >
             <span className="font-medium text-sm">Language</span>
-            <div className="flex items-center space-x-1 ml-2">
-              <span className="font-medium text-sm text-gray-900">
+            <div
+              className="flex items-center space-x-1 ml-2 cursor-pointer"
+              onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+            >
+              <span className="font-medium text-sm text-gray-900 dark:text-white">
                 {language}
               </span>
               <Icon icon="mdi:chevron-down" className="text-blue-600" />
             </div>
+
+            {/* Language Dropdown */}
+            {showLanguageDropdown && (
+              <div className="absolute bottom-full left-0 mb-1 w-full bg-white dark:bg-gray-700 rounded-md shadow-lg border border-gray-200 dark:border-gray-600 py-1 z-50">
+                {languages.map((lang) => (
+                  <button
+                    key={lang}
+                    className={`w-full text-left px-4 py-2 text-sm ${
+                      lang === language
+                        ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                        : "hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300"
+                    }`}
+                    onClick={() => {
+                      setLanguage(lang);
+                      setShowLanguageDropdown(false);
+                    }}
+                  >
+                    {lang}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex justify-center">

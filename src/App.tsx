@@ -16,6 +16,7 @@ import PartnersPage from "./pages/PartnersPage";
 import ContactPage from "./pages/ContactPage";
 import Layout from "./components/Layout";
 import ThemeDebug from "./components/ThemeDebug";
+import { DataProvider } from "./contexts/DataContext";
 
 function App() {
   const [hasEnteredPortal, setHasEnteredPortal] = useState(false);
@@ -34,49 +35,54 @@ function App() {
   };
 
   return (
-    <Router>
-      <Routes>
-        {/* Landing Page - shown only if user hasn't entered portal */}
-        <Route
-          path="/"
-          element={
-            hasEnteredPortal ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <LandingPage onEnterPortal={handleEnterPortal} />
-            )
-          }
-        />
-
-        {/* Protected routes - all use the Layout component */}
-        <Route element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="dashboard" element={<Dashboard />} />
+    <DataProvider>
+      <Router>
+        <Routes>
+          {/* Landing Page - shown only if user hasn't entered portal */}
           <Route
-            path="departments/:departmentSlug"
-            element={<DepartmentPage />}
+            path="/"
+            element={
+              hasEnteredPortal ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <LandingPage onEnterPortal={handleEnterPortal} />
+              )
+            }
           />
-          <Route path="labs/:labSlug" element={<LabPage />} />
-          <Route
-            path="experiments/:experimentSlug"
-            element={<ExperimentPage />}
-          />
-          <Route path="collections" element={<CollectionsPage />} />
-          <Route path="notebook" element={<LabNotebookPage />} />
-          <Route path="partners" element={<PartnersPage />} />
-          <Route path="contact" element={<ContactPage />} />
-        </Route>
 
-        {/* Catch all unmatched routes */}
-        <Route
-          path="*"
-          element={
-            <Navigate to={hasEnteredPortal ? "/dashboard" : "/"} replace />
-          }
-        />
-      </Routes>
-      <ThemeDebug />
-    </Router>
+          {/* Protected routes - all use the Layout component */}
+          <Route element={<Layout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route
+              path="departments/:departmentId"
+              element={<DepartmentPage />}
+            />
+            <Route
+              path="departments/:departmentId/labs/:labId"
+              element={<LabPage />}
+            />
+            <Route
+              path="departments/:departmentId/labs/:labId/experiments/:experimentId"
+              element={<ExperimentPage />}
+            />
+            <Route path="collections" element={<CollectionsPage />} />
+            <Route path="notebook" element={<LabNotebookPage />} />
+            <Route path="partners" element={<PartnersPage />} />
+            <Route path="contact" element={<ContactPage />} />
+          </Route>
+
+          {/* Catch all unmatched routes */}
+          <Route
+            path="*"
+            element={
+              <Navigate to={hasEnteredPortal ? "/dashboard" : "/"} replace />
+            }
+          />
+        </Routes>
+        <ThemeDebug />
+      </Router>
+    </DataProvider>
   );
 }
 
