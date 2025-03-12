@@ -5,19 +5,13 @@ const ThemeToggle = () => {
   // State to track if dark mode is active
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 
-  // Effect to initialize the theme based on system preference or localStorage
+  // Effect to initialize the theme based on localStorage or default to light
   useEffect(() => {
     // Check if theme is already set in localStorage
     const savedTheme = localStorage.getItem("theme");
 
-    // Check system preference if no saved theme
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: light)"
-    ).matches;
-
-    // Initialize state based on saved theme or system preference
-    const initialIsDark =
-      savedTheme === "dark" || (savedTheme === null && prefersDark);
+    // Initialize with saved theme or default to light mode
+    const initialIsDark = savedTheme === "dark";
 
     setIsDarkMode(initialIsDark);
 
