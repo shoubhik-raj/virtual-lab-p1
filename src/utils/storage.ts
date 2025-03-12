@@ -59,3 +59,82 @@ export const bookmarkExperiment = (
     localStorage.setItem("bookmarks", JSON.stringify(bookmarks));
   }
 };
+
+// Sticky notes structure in localStorage
+export interface StickyNote {
+  id: string;
+  text: string;
+  color: string;
+  experimentId: string;
+  createdAt: string;
+}
+
+// Get all sticky notes
+export const getStickyNotes = (): Record<string, StickyNote[]> => {
+  const notes = localStorage.getItem("stickyNotes");
+  return notes ? JSON.parse(notes) : {};
+};
+
+// Get sticky notes for a specific experiment
+export const getExperimentStickyNotes = (
+  experimentId: string
+): StickyNote[] => {
+  const allNotes = getStickyNotes();
+  return allNotes[experimentId] || [];
+};
+
+// Save a sticky note
+export const saveStickyNote = (note: StickyNote): void => {
+  const allNotes = getStickyNotes();
+  if (!allNotes[note.experimentId]) {
+    allNotes[note.experimentId] = [];
+  }
+
+  // Update if exists, otherwise add
+  const noteIndex = allNotes[note.experimentId].findIndex(
+    (n) => n.id === note.id
+  );
+  if (noteIndex >= 0) {
+    allNotes[note.experimentId][noteIndex] = note;
+  } else {
+    allNotes[note.experimentId].push(note);
+  }
+
+  localStorage.setItem("stickyNotes", JSON.stringify(allNotes));
+};
+
+// Delete a sticky note
+export const deleteStickyNote = (
+  experimentId: string,
+  noteId: string
+): void => {
+  const allNotes = getStickyNotes();
+  if (allNotes[experimentId]) {
+    allNotes[experimentId] = allNotes[experimentId].filter(
+      (n) => n.id !== noteId
+    );
+    localStorage.setItem("stickyNotes", JSON.stringify(allNotes));
+  }
+};
+
+// Save additional notes content (for Quill editor)
+export const saveAdditionalNotes = (
+  experimentId: string,
+  content: string
+): void => {
+  const additionalNotes = getAdditionalNotes();
+  additionalNotes[experimentId] = content;
+  localStorage.setItem("additionalNotes", JSON.stringify(additionalNotes));
+};
+
+// Get additional notes content
+export const getAdditionalNotes = (): Record<string, string> => {
+  const notes = localStorage.getItem("additionalNotes");
+  return notes ? JSON.parse(notes) : {};
+};
+
+// Get specific experiment additional notes
+export const getExperimentAdditionalNotes = (experimentId: string): string => {
+  const allNotes = getAdditionalNotes();
+  return allNotes[experimentId] || "";
+};

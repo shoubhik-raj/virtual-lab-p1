@@ -33,3 +33,12 @@ export interface UserCollection {
   name: string;
   experimentIds: number[];
 }
+
+export interface StickyNote {
+  id: string;
+  text: string;
+  color: string;
+  experimentId: string;
+  createdAt: string;
+  isNew?: boolean;
+}

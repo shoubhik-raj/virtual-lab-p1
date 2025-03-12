@@ -18,6 +18,7 @@ import Layout from "./components/Layout";
 import ThemeDebug from "./components/ThemeDebug";
 import { DataProvider } from "./contexts/DataContext";
 import CollectionDetailPage from "./pages/CollectionDetailPage";
+import LabNoteOpenPage from "./pages/LabNoteOpenPage";
 
 function App() {
   const [hasEnteredPortal, setHasEnteredPortal] = useState(false);
@@ -74,6 +75,10 @@ function App() {
             <Route
               path="collections/:collectionId"
               element={<CollectionDetailPage />}
+            />
+            <Route
+              path="/notebook/:experimentId"
+              element={<LabNoteOpenPage />}
             />
           </Route>
 

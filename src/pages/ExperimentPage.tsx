@@ -130,6 +130,10 @@ const ExperimentPage = () => {
     userNotes,
     markTabCompleted,
     getCollectionsByExperimentId,
+    getExperimentStickyNotes,
+    addStickyNote,
+    updateStickyNote,
+    deleteStickyNote,
   } = useData();
 
   const [activeTab, setActiveTab] = useState("aim");
@@ -148,16 +152,7 @@ const ExperimentPage = () => {
   const [rightPanelTab, setRightPanelTab] = useState<"notes" | "assistant">(
     "notes"
   );
-  const [stickyNotes, setStickyNotes] = useState<
-    { id: string; text: string; color: string; isNew: boolean }[]
-  >([
-    {
-      id: "1",
-      text: "Remember reasoning behind demorgan ka law dhang se",
-      color: "bg-red-200",
-      isNew: false,
-    },
-  ]);
+  const [stickyNotes, setStickyNotes] = useState<any[]>([]);
   const [chatMessages, setChatMessages] = useState<
     { text: string; timestamp: Date; isUser: boolean }[]
   >([
@@ -187,6 +182,14 @@ const ExperimentPage = () => {
         chatContainerRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  // Add this useEffect to load sticky notes
+  useEffect(() => {
+    if (experimentIdString) {
+      const notes = getExperimentStickyNotes(experimentIdString);
+      setStickyNotes(notes);
+    }
+  }, [experimentIdString, getExperimentStickyNotes]);
 
   const experiment = getExperimentById(experimentIdString);
   const lab = getLabById(labIdString);
@@ -248,36 +251,28 @@ const ExperimentPage = () => {
   };
 
   // Function to add a new sticky note
-  const addStickyNote = () => {
+  const handleAddStickyNote = () => {
     const colors = [
-      "bg-yellow-200",
-      "bg-red-200",
-      "bg-green-200",
-      "bg-blue-200",
-      "bg-purple-200",
+      "bg-yellow-100",
+      "bg-blue-100",
+      "bg-pink-100",
+      "bg-green-100",
+      "bg-purple-100",
     ];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
-    const newNote = {
-      id: Date.now().toString(),
-      text: "",
-      color: randomColor,
-      isNew: true,
-    };
-
-    setStickyNotes([...stickyNotes, newNote]);
+    const newNote = addStickyNote(experimentIdString, "", randomColor);
+    setStickyNotes([...stickyNotes, { ...newNote, isNew: true }]);
   };
 
-  const deleteNote = (id: string) => {
-    setStickyNotes(stickyNotes.filter((note) => note.id !== id));
+  const handleUpdateStickyNote = (noteId: string, text: string) => {
+    updateStickyNote(experimentIdString, noteId, text);
+    setStickyNotes(getExperimentStickyNotes(experimentIdString));
   };
 
-  const updateStickyNote = (id: string, newText: string) => {
-    setStickyNotes(
-      stickyNotes.map((note) =>
-        note.id === id ? { ...note, text: newText, isNew: false } : note
-      )
-    );
+  const handleDeleteStickyNote = (noteId: string) => {
+    deleteStickyNote(experimentIdString, noteId);
+    setStickyNotes(getExperimentStickyNotes(experimentIdString));
   };
 
   // Function to send a chat message
@@ -997,14 +992,14 @@ const ExperimentPage = () => {
                       note={note.text}
                       color={note.color}
                       isNew={note.isNew}
-                      onDelete={() => deleteNote(note.id)}
-                      onSave={(text) => updateStickyNote(note.id, text)}
+                      onDelete={() => handleDeleteStickyNote(note.id)}
+                      onSave={(text) => handleUpdateStickyNote(note.id, text)}
                     />
                   ))}
 
                   {/* Add new note button inside the scrollable area */}
                   <button
-                    onClick={addStickyNote}
+                    onClick={handleAddStickyNote}
                     className="flex items-center text-gray-600 hover:text-gray-900 w-full justify-center py-2"
                   >
                     <Icon icon="mdi:plus" className="mr-2" />

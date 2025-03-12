@@ -47,7 +47,7 @@ const Sidebar = ({ isOpen, toggleSidebar }: SidebarProps) => {
     >
       {/* Toggle button */}
       <button
-        className="absolute -right-3 top-10 bg-white dark:bg-gray-800 rounded-full p-1 shadow-md"
+        className="absolute -right-3 top-36 bg-white dark:bg-gray-800 rounded-full p-1 shadow-md"
         onClick={toggleSidebar}
       >
         <Icon
@@ -61,7 +61,7 @@ const Sidebar = ({ isOpen, toggleSidebar }: SidebarProps) => {
         {isOpen ? (
           <>
             <img
-              src="/assets/img/vlabs-color-small-moe.jpg"
+              src="/assets/img/vlabs-color-small-moe.png"
               alt="Virtual Labs"
               className="h-20 w-auto my-2"
             />

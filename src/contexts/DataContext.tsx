@@ -1,5 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import * as initialData from "../data/newMockData";
+import * as storage from "../utils/storage";
+import {
+  Department,
+  Lab,
+  Experiment,
+  TabProgress,
+  ExperimentProgress,
+  Collection,
+  StickyNote,
+} from "../types";
 
 // Define interfaces for our data types
 export interface Simulation {
@@ -81,6 +91,8 @@ export interface DataContextType {
   userBookmarks: number[]; // experimentIds that are bookmarked
   userNotes: Record<number, string>; // experimentId -> notes
   collections: Collection[];
+  stickyNotes: Record<string, StickyNote[]>;
+  additionalNotes: Record<string, string>;
 
   // CRUD operations
   updateExperimentProgress: (experimentId: number, progress: number) => void;
@@ -108,6 +120,20 @@ export interface DataContextType {
   deleteCollection: (collectionId: string) => void;
   getCollectionById: (id: string) => Collection | undefined;
   getCollectionsByExperimentId: (experimentId: string) => Collection[];
+  getExperimentStickyNotes: (experimentId: string) => StickyNote[];
+  addStickyNote: (
+    experimentId: string,
+    text: string,
+    color: string
+  ) => StickyNote;
+  updateStickyNote: (
+    experimentId: string,
+    noteId: string,
+    text: string
+  ) => void;
+  deleteStickyNote: (experimentId: string, noteId: string) => void;
+  saveAdditionalNotes: (experimentId: string, content: string) => void;
+  getExperimentAdditionalNotes: (experimentId: string) => string;
 }
 
 // Create the context
@@ -177,6 +203,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     localStorage.setItem("virtualLab_collections", JSON.stringify(collections));
   }, [collections]);
+
+  // Add these to DataContext state and provide methods
+  const [stickyNotes, setStickyNotes] = useState<Record<string, StickyNote[]>>(
+    {}
+  );
+  const [additionalNotes, setAdditionalNotes] = useState<
+    Record<string, string>
+  >({});
+
+  // Load sticky notes on initial load
+  useEffect(() => {
+    // Load sticky notes from localStorage on initial load
+    const storedNotes = storage.getStickyNotes();
+    if (storedNotes && Object.keys(storedNotes).length > 0) {
+      setStickyNotes(storedNotes);
+      console.log("Loaded sticky notes:", storedNotes);
+    }
+
+    // Load additional notes
+    const storedAdditionalNotes = storage.getAdditionalNotes();
+    if (
+      storedAdditionalNotes &&
+      Object.keys(storedAdditionalNotes).length > 0
+    ) {
+      setAdditionalNotes(storedAdditionalNotes);
+    }
+  }, []);
 
   // CRUD operations
   const updateExperimentProgress = (experimentId: number, progress: number) => {
@@ -353,6 +406,79 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
     return collections.filter((c) => c.experimentIds.includes(experimentId));
   };
 
+  // Function to get sticky notes for an experiment
+  const getExperimentStickyNotes = (experimentId: string) => {
+    return stickyNotes[experimentId] || [];
+  };
+
+  // Function to add a sticky note
+  const addStickyNote = (experimentId: string, text: string, color: string) => {
+    const newNote: StickyNote = {
+      id: Date.now().toString(),
+      text,
+      color,
+      experimentId,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedNotes = { ...stickyNotes };
+    if (!updatedNotes[experimentId]) {
+      updatedNotes[experimentId] = [];
+    }
+    updatedNotes[experimentId] = [...updatedNotes[experimentId], newNote];
+
+    setStickyNotes(updatedNotes);
+    storage.saveStickyNote(newNote);
+
+    return newNote;
+  };
+
+  // Function to update a sticky note
+  const updateStickyNote = (
+    experimentId: string,
+    noteId: string,
+    text: string
+  ) => {
+    if (!stickyNotes[experimentId]) return;
+
+    const noteIndex = stickyNotes[experimentId].findIndex(
+      (n) => n.id === noteId
+    );
+    if (noteIndex < 0) return;
+
+    const updatedNotes = { ...stickyNotes };
+    const updatedNote = { ...updatedNotes[experimentId][noteIndex], text };
+    updatedNotes[experimentId][noteIndex] = updatedNote;
+
+    setStickyNotes(updatedNotes);
+    storage.saveStickyNote(updatedNote);
+  };
+
+  // Function to delete a sticky note
+  const deleteStickyNote = (experimentId: string, noteId: string) => {
+    if (!stickyNotes[experimentId]) return;
+
+    const updatedNotes = { ...stickyNotes };
+    updatedNotes[experimentId] = updatedNotes[experimentId].filter(
+      (n) => n.id !== noteId
+    );
+
+    setStickyNotes(updatedNotes);
+    storage.deleteStickyNote(experimentId, noteId);
+  };
+
+  // Function to save additional notes (Quill editor content)
+  const saveAdditionalNotes = (experimentId: string, content: string) => {
+    const updatedNotes = { ...additionalNotes, [experimentId]: content };
+    setAdditionalNotes(updatedNotes);
+    storage.saveAdditionalNotes(experimentId, content);
+  };
+
+  // Function to get additional notes
+  const getExperimentAdditionalNotes = (experimentId: string) => {
+    return additionalNotes[experimentId] || "";
+  };
+
   // Provide the context value
   const contextValue: DataContextType = {
     departments,
@@ -362,6 +488,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
     userBookmarks,
     userNotes,
     collections,
+    stickyNotes,
+    additionalNotes,
     updateExperimentProgress,
     toggleBookmark,
     saveNote,
@@ -377,6 +505,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
     deleteCollection,
     getCollectionById,
     getCollectionsByExperimentId,
+    getExperimentStickyNotes,
+    addStickyNote,
+    updateStickyNote,
+    deleteStickyNote,
+    saveAdditionalNotes,
+    getExperimentAdditionalNotes,
   };
 
   return (
