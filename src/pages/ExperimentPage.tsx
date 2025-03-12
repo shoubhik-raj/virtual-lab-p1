@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useData } from "../contexts/DataContext";
 import { Icon } from "@iconify/react";
+import CollectionModal from "../components/CollectionModal";
+import SpeechButton from "../components/SpeechButton";
 
 // Note component for sticky notes
 const StickyNote = ({
@@ -27,27 +29,27 @@ const StickyNote = ({
 
   return (
     <div
-      className={`p-4 mb-4 rounded-lg shadow-md ${color} relative`}
-      style={{ minHeight: "100px" }}
+      className={`p-6 mb-4 ${color} relative shadow-xl text-sm text-center flex flex-col justify-center items-center`}
+      style={{ minHeight: "140px" }}
     >
       {isEditing ? (
         <>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full h-24 p-1 rounded bg-white bg-opacity-70 focus:outline-none resize-none"
+            className="w-full h-24 p-1 rounded bg-opacity-70 bg-transparent focus:outline-none resize-none"
             autoFocus
           />
           <div className="flex justify-end mt-2">
             <button
               onClick={handleSave}
-              className="bg-green-500 text-white px-2 py-1 rounded text-xs mr-2 hover:bg-green-600"
+              className="bg-green-400 text-white px-3 py-2 rounded-lg text-xs mr-3 hover:bg-green-500"
             >
               Save
             </button>
             <button
               onClick={onDelete}
-              className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
+              className="bg-red-400 text-white px-3 py-2 rounded-lg text-xs hover:bg-red-500"
             >
               Delete
             </button>
@@ -55,17 +57,19 @@ const StickyNote = ({
         </>
       ) : (
         <>
-          <p className="text-gray-800">{text}</p>
-          <div className="absolute top-2 right-2 flex space-x-1">
+          <div className="pr-8">
+            <p className="text-gray-800">{text}</p>
+          </div>
+          <div className="absolute top-2 right-2 flex flex-col space-y-1">
             <button
               onClick={() => setIsEditing(true)}
-              className="text-gray-600 hover:text-gray-800"
+              className="text-gray-600 hover:text-gray-800 bg-white bg-opacity-70 rounded-full p-1"
             >
               <Icon icon="mdi:pencil" className="w-4 h-4" />
             </button>
             <button
               onClick={onDelete}
-              className="text-gray-600 hover:text-red-500"
+              className="text-gray-600 hover:text-red-500 bg-white bg-opacity-70 rounded-full p-1"
             >
               <Icon icon="mdi:trash-can-outline" className="w-4 h-4" />
             </button>
@@ -124,6 +128,8 @@ const ExperimentPage = () => {
     userBookmarks,
     saveNote,
     userNotes,
+    markTabCompleted,
+    getCollectionsByExperimentId,
   } = useData();
 
   const [activeTab, setActiveTab] = useState("aim");
@@ -167,12 +173,30 @@ const ExperimentPage = () => {
   const [activeSimIndex, setActiveSimIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Add state for collection modal
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
+
+  // Add this useRef at the top of the ExperimentPage component
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Add this useEffect to handle auto-scrolling
+  useEffect(() => {
+    // Scroll to bottom of chat container when messages change
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
   const experiment = getExperimentById(experimentIdString);
   const lab = getLabById(labIdString);
   const department = getDepartmentById(deptId);
 
-  const progress = userProgress[experimentIdString] || 50;
+  const progress = userProgress[experimentIdString]?.overall || 0;
   const isBookmarked = userBookmarks.includes(experimentIdString);
+
+  const isInAnyCollection =
+    getCollectionsByExperimentId(experimentIdString).length > 0;
 
   useEffect(() => {
     // Load saved notes when experiment changes
@@ -299,6 +323,51 @@ const ExperimentPage = () => {
     }
   };
 
+  // Check if tab is completed
+  const isTabCompleted = (tabName: string) => {
+    return userProgress[experimentIdString]?.tabs?.[tabName] || false;
+  };
+
+  // Add "Mark Completed" button at the end of each content section
+  const renderMarkCompletedButton = (tabName: string) => {
+    if (["references", "contributors", "faq"].includes(tabName)) {
+      return null; // No button for these tabs
+    }
+
+    const completed = isTabCompleted(tabName);
+
+    return (
+      <div className="mt-8 flex justify-end">
+        <button
+          onClick={() => markTabCompleted(experimentIdString, tabName)}
+          disabled={completed}
+          className={`px-4 py-2 rounded-lg flex items-center ${
+            completed
+              ? "bg-green-100 text-green-700 cursor-not-allowed"
+              : "bg-blue-600 text-white hover:bg-blue-700"
+          }`}
+        >
+          {completed ? (
+            <>
+              <Icon icon="mdi:check-circle" className="mr-2" />
+              Completed
+            </>
+          ) : (
+            <>
+              <Icon icon="mdi:check" className="mr-2" />
+              Mark as Completed
+            </>
+          )}
+        </button>
+      </div>
+    );
+  };
+
+  // Modify bookmark icon click to show modal
+  const handleBookmarkClick = () => {
+    setShowCollectionModal(true);
+  };
+
   if (!experiment || !lab || !department) {
     return <div>Experiment, Lab or Department not found</div>;
   }
@@ -363,40 +432,50 @@ const ExperimentPage = () => {
     switch (activeTab) {
       case "aim":
         return (
-          <div className="bg-white py-4">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-medium text-gray-900 dark:text-white">
+                Aim
+              </h2>
+              <SpeechButton text={experiment.aim} />
+            </div>
             <div
-              className="prose max-w-none text-gray-600"
-              dangerouslySetInnerHTML={{
-                __html:
-                  experiment.aim || "No aim provided for this experiment.",
-              }}
+              className="prose dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: experiment.aim }}
             ></div>
+            {renderMarkCompletedButton("aim")}
           </div>
         );
       case "theory":
         return (
-          <div className="bg-white py-4">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-medium text-gray-900 dark:text-white">
+                Theory
+              </h2>
+              <SpeechButton text={experiment.theory} />
+            </div>
             <div
-              className="prose max-w-none text-gray-600"
-              dangerouslySetInnerHTML={{
-                __html:
-                  experiment.theory ||
-                  "No theory provided for this experiment.",
-              }}
+              className="prose dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: experiment.theory }}
             ></div>
+            {renderMarkCompletedButton("theory")}
           </div>
         );
       case "procedure":
         return (
-          <div className="bg-white py-4">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-medium text-gray-900 dark:text-white">
+                Procedure
+              </h2>
+              <SpeechButton text={experiment.procedure} />
+            </div>
             <div
-              className="prose max-w-none text-gray-600"
-              dangerouslySetInnerHTML={{
-                __html:
-                  experiment.procedure ||
-                  "No procedure provided for this experiment.",
-              }}
+              className="prose dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: experiment.procedure }}
             ></div>
+            {renderMarkCompletedButton("procedure")}
           </div>
         );
       case "simulation":
@@ -466,6 +545,7 @@ const ExperimentPage = () => {
                 </p>
               </div>
             )}
+            {renderMarkCompletedButton("simulation")}
           </div>
         );
       case "pretest":
@@ -564,6 +644,7 @@ const ExperimentPage = () => {
             >
               {quizSubmitted.pretest ? "Quiz Submitted" : "Submit Quiz"}
             </button>
+            {quizSubmitted.pretest && renderMarkCompletedButton("pretest")}
           </div>
         );
       case "posttest":
@@ -673,6 +754,7 @@ const ExperimentPage = () => {
             >
               {quizSubmitted.posttest ? "Quiz Submitted" : "Submit Quiz"}
             </button>
+            {quizSubmitted.posttest && renderMarkCompletedButton("posttest")}
           </div>
         );
       case "references":
@@ -686,6 +768,7 @@ const ExperimentPage = () => {
                   "No references provided for this experiment.",
               }}
             ></div>
+            {renderMarkCompletedButton("references")}
           </div>
         );
       case "contributors":
@@ -699,6 +782,7 @@ const ExperimentPage = () => {
                   "No contributors listed for this experiment.",
               }}
             ></div>
+            {renderMarkCompletedButton("contributors")}
           </div>
         );
       case "faq":
@@ -723,6 +807,7 @@ const ExperimentPage = () => {
                 No FAQs available for this experiment.
               </p>
             )}
+            {renderMarkCompletedButton("faq")}
           </div>
         );
       default:
@@ -737,7 +822,7 @@ const ExperimentPage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto pb-12 p-12 relative">
+    <div className="max-w-7xl mx-auto pb-0 p-12 relative">
       {/* Notes Sidebar */}
       {showNotes && (
         <div className="fixed inset-y-0 right-0 w-80 bg-white border-l border-gray-200 p-4 z-20 shadow-lg">
@@ -768,13 +853,13 @@ const ExperimentPage = () => {
 
       {/* Header Section */}
       <div className="mb-8">
-        <div className="text-sm text-blue-500 mb-1">
+        <div className="text-sm text-gray-700 mb-1">
           <Link
             to={`/departments/${deptId}/labs/${labIdString}`}
             className="hover:underline flex items-center"
           >
             <Icon icon="mdi:arrow-left" className="mr-1" />
-            Back to {lab.name}
+            {lab.name}
           </Link>
         </div>
         <div className="flex items-center justify-between">
@@ -783,14 +868,14 @@ const ExperimentPage = () => {
               {experiment.name}
             </h1>
             <button
-              onClick={() => toggleBookmark(experimentIdString)}
+              onClick={handleBookmarkClick}
               className="p-2 rounded-full bg-gray-100 mb-6"
             >
               <Icon
-                icon={isBookmarked ? "mdi:bookmark" : "mdi:bookmark-outline"}
-                className={`text-xl ${
-                  isBookmarked ? "text-yellow-500" : "text-gray-500"
-                }`}
+                icon={
+                  isInAnyCollection ? "mdi:bookmark" : "mdi:bookmark-outline"
+                }
+                className="text-xl text-blue-600"
               />
             </button>
           </div>
@@ -798,13 +883,15 @@ const ExperimentPage = () => {
           <div className="flex items-center space-x-4">
             {/* Progress bar */}
             <div className="flex items-center">
-              <div className="w-32 bg-gray-200 rounded-full h-2.5 mr-2">
+              <span className="text-sm font-medium text-gray-600">
+                {progress}% COMPLETED
+              </span>
+              <div className="w-32 bg-gray-200 rounded-full h-2 ml-3">
                 <div
-                  className="bg-blue-600 h-2.5 rounded-full"
+                  className="bg-blue-600 h-2 rounded-full"
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>
-              <span className="text-sm text-gray-600">{progress}%</span>
             </div>
           </div>
         </div>
@@ -872,37 +959,38 @@ const ExperimentPage = () => {
         </div>
 
         {/* Right Panel - Lab Notes and AI Assistant */}
-        <div className="w-72 h-fit sticky top-20 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="w-72 h-[600px] sticky top-[72px] z-40 border-l-2 flex flex-col overflow-hidden">
           {/* Tab navigation */}
-          <div className="flex rounded-t-lg overflow-hidden">
+          <div className="flex py-1 bg-gray-100 rounded-2xl mx-2 mt-2">
             <button
               onClick={() => setRightPanelTab("notes")}
-              className={`flex-1 py-3 px-4 text-center font-medium ${
+              className={`flex-1 px-3 py-1 text-center transition-colors duration-200 rounded-2xl text-sm ${
                 rightPanelTab === "notes"
                   ? "bg-blue-500 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               Lab Notes
             </button>
             <button
               onClick={() => setRightPanelTab("assistant")}
-              className={`flex-1 py-3 px-4 text-center font-medium ${
+              className={`flex-1 px-3 py-1 text-center transition-colors duration-200 rounded-xl text-sm ${
                 rightPanelTab === "assistant"
                   ? "bg-blue-500 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               AI Learning Assistant
             </button>
           </div>
 
-          {/* Tab content */}
-          <div className="p-4">
+          {/* Tab content with fixed height and scrolling */}
+          <div className="flex-1 overflow-hidden flex flex-col">
             {rightPanelTab === "notes" ? (
-              <div>
-                {/* Sticky notes */}
-                <div className="mb-4">
+              <div className="flex flex-col h-full">
+                {/* Scrollable container for all sticky notes content including the add button */}
+                <div className="p-4 flex-1 overflow-y-auto">
+                  {/* Sticky notes */}
                   {stickyNotes.map((note) => (
                     <StickyNote
                       key={note.id}
@@ -913,23 +1001,23 @@ const ExperimentPage = () => {
                       onSave={(text) => updateStickyNote(note.id, text)}
                     />
                   ))}
-                </div>
 
-                {/* Add new note button */}
-                <button
-                  onClick={addStickyNote}
-                  className="flex items-center text-gray-600 hover:text-gray-900"
-                >
-                  <Icon icon="mdi:plus" className="mr-2" />
-                  Add new sticky note
-                </button>
+                  {/* Add new note button inside the scrollable area */}
+                  <button
+                    onClick={addStickyNote}
+                    className="flex items-center text-gray-600 hover:text-gray-900 w-full justify-center py-2"
+                  >
+                    <Icon icon="mdi:plus" className="mr-2" />
+                    Add new sticky note
+                  </button>
+                </div>
               </div>
             ) : (
-              <div>
-                {/* Chat interface */}
+              <div className="flex flex-col h-full">
+                {/* Chat messages - scrollable */}
                 <div
-                  className="overflow-y-auto mb-4"
-                  style={{ height: "400px" }}
+                  className="p-4 flex-1 overflow-y-auto"
+                  ref={chatContainerRef}
                 >
                   {chatMessages.map((msg, index) => (
                     <ChatMessage
@@ -940,28 +1028,39 @@ const ExperimentPage = () => {
                   ))}
                 </div>
 
-                {/* Chat input */}
-                <div className="flex">
-                  <input
-                    type="text"
-                    value={newChatMessage}
-                    onChange={(e) => setNewChatMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && sendChatMessage()}
-                    placeholder="Ask a question..."
-                    className="flex-1 border border-gray-300 rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    onClick={sendChatMessage}
-                    className="bg-blue-500 text-white p-2 rounded-r-lg hover:bg-blue-600"
-                  >
-                    <Icon icon="mdi:send" />
-                  </button>
+                {/* Chat input - fixed at bottom */}
+                <div className="p-2">
+                  <div className="flex items-center bg-gray-100 rounded-2xl overflow-hidden h-14">
+                    <input
+                      type="text"
+                      value={newChatMessage}
+                      onChange={(e) => setNewChatMessage(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && sendChatMessage()}
+                      placeholder="Ask me some question.."
+                      className="flex-1 bg-transparent text-sm border-none px-6 py-2 text-gray-600 placeholder-gray-400 focus:outline-none"
+                    />
+                    <button
+                      onClick={sendChatMessage}
+                      disabled={!newChatMessage.trim()}
+                      className="bg-blue-500 hover:bg-blue-600 text-white rounded-2xl h-12 w-12 flex items-center justify-center mr-1 transition-colors cursor-pointer"
+                      aria-label="Send message"
+                    >
+                      <Icon icon="proicons:send" />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Collection Modal */}
+      <CollectionModal
+        experimentId={experimentIdString}
+        isOpen={showCollectionModal}
+        onClose={() => setShowCollectionModal(false)}
+      />
     </div>
   );
 };

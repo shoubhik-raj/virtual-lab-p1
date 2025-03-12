@@ -129,7 +129,7 @@ const Sidebar = ({ isOpen, toggleSidebar }: SidebarProps) => {
             className="flex items-center px-4 justify-center text-gray-600 dark:text-gray-300 relative"
             ref={languageDropdownRef}
           >
-            <span className="font-medium text-sm">Language</span>
+            <span className="font-medium text-gray-400 text-sm">Language</span>
             <div
               className="flex items-center space-x-1 ml-2 cursor-pointer"
               onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}

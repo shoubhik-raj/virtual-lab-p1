@@ -47,14 +47,40 @@ export interface Department {
   labs: Lab[];
 }
 
+// Add to existing interfaces
+export interface TabProgress {
+  aim: boolean;
+  theory: boolean;
+  procedure: boolean;
+  simulation: boolean;
+  pretest: boolean;
+  posttest: boolean;
+}
+
+export interface ExperimentProgress {
+  overall: number;
+  tabs: TabProgress;
+}
+
+// Add this interface to define collection structure
+export interface Collection {
+  id: string;
+  title: string;
+  experimentIds: string[];
+  lastModified: number; // timestamp
+  description?: string;
+  thumbnail?: string;
+}
+
 // Define our context type
 export interface DataContextType {
   departments: Department[];
   labs: Lab[];
   experiments: Experiment[];
-  userProgress: Record<number, number>; // experimentId -> progress percentage
+  userProgress: { [key: string]: ExperimentProgress }; // experimentId -> progress percentage
   userBookmarks: number[]; // experimentIds that are bookmarked
   userNotes: Record<number, string>; // experimentId -> notes
+  collections: Collection[];
 
   // CRUD operations
   updateExperimentProgress: (experimentId: number, progress: number) => void;
@@ -67,6 +93,21 @@ export interface DataContextType {
   getExperimentById: (id: string) => Experiment | undefined;
   getLabsByDepartment: (departmentId: number) => Lab[];
   getExperimentsByLab: (labId: string) => Experiment[];
+
+  // New functions
+  markTabCompleted: (experimentId: string, tabName: string) => void;
+  createCollection: (title: string, description?: string) => string;
+  addExperimentToCollection: (
+    collectionId: string,
+    experimentId: string
+  ) => void;
+  removeExperimentFromCollection: (
+    collectionId: string,
+    experimentId: string
+  ) => void;
+  deleteCollection: (collectionId: string) => void;
+  getCollectionById: (id: string) => Collection | undefined;
+  getCollectionsByExperimentId: (experimentId: string) => Collection[];
 }
 
 // Create the context
@@ -96,12 +137,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
   console.log("Experiments:", experiments);
 
   // User-specific data
-  const [userProgress, setUserProgress] = useState<Record<number, number>>(
-    () => {
-      const saved = localStorage.getItem("virtualLab_progress");
-      return saved ? JSON.parse(saved) : {};
-    }
-  );
+  const [userProgress, setUserProgress] = useState<{
+    [key: string]: ExperimentProgress;
+  }>(() => {
+    const saved = localStorage.getItem("virtualLab_progress");
+    return saved ? JSON.parse(saved) : {};
+  });
 
   const [userBookmarks, setUserBookmarks] = useState<number[]>(() => {
     const saved = localStorage.getItem("virtualLab_bookmarks");
@@ -126,11 +167,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("virtualLab_notes", JSON.stringify(userNotes));
   }, [userNotes]);
 
+  // New state for collections
+  const [collections, setCollections] = useState<Collection[]>(() => {
+    const saved = localStorage.getItem("virtualLab_collections");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Save collections to localStorage when changed
+  useEffect(() => {
+    localStorage.setItem("virtualLab_collections", JSON.stringify(collections));
+  }, [collections]);
+
   // CRUD operations
   const updateExperimentProgress = (experimentId: number, progress: number) => {
     setUserProgress((prev) => ({
       ...prev,
-      [experimentId]: progress,
+      [experimentId]: {
+        overall: progress,
+        tabs: {
+          aim: false,
+          theory: false,
+          procedure: false,
+          simulation: false,
+          pretest: false,
+          posttest: false,
+        },
+      },
     }));
   };
 
@@ -175,6 +237,122 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
     return experiments.filter((exp) => exp.labId === labId);
   };
 
+  // Function to mark tab as completed
+  const markTabCompleted = (experimentId: string, tabName: string) => {
+    setUserProgress((prev) => {
+      // Get existing progress or create a new one
+      const currentProgress = prev[experimentId] || {
+        overall: 0,
+        tabs: {
+          aim: false,
+          theory: false,
+          procedure: false,
+          simulation: false,
+          pretest: false,
+          posttest: false,
+        },
+      };
+
+      // Update the tab
+      const updatedTabs = { ...currentProgress.tabs, [tabName]: true };
+
+      // Calculate new overall progress (6 important tabs)
+      const completedTabs = Object.values(updatedTabs).filter(Boolean).length;
+      const newOverall = Math.round((completedTabs / 6) * 100);
+
+      // Return updated progress
+      const newProgress = {
+        ...prev,
+        [experimentId]: {
+          overall: newOverall,
+          tabs: updatedTabs,
+        },
+      };
+
+      // Store in localStorage
+      localStorage.setItem("virtualLab_progress", JSON.stringify(newProgress));
+
+      return newProgress;
+    });
+  };
+
+  // Collection management functions
+  const createCollection = (title: string, description?: string): string => {
+    const newId = Date.now().toString();
+
+    setCollections((prev) => [
+      ...prev,
+      {
+        id: newId,
+        title,
+        description: description || "",
+        experimentIds: [],
+        lastModified: Date.now(),
+        thumbnail: "", // Will be updated when experiments are added
+      },
+    ]);
+
+    return newId;
+  };
+
+  const addExperimentToCollection = (
+    collectionId: string,
+    experimentId: string
+  ) => {
+    setCollections((prev) => {
+      return prev.map((collection) => {
+        if (collection.id === collectionId) {
+          // Only add if not already in collection
+          if (!collection.experimentIds.includes(experimentId)) {
+            // Find experiment to potentially use as thumbnail
+            const experiment = experiments.find((e) => e.id === experimentId);
+
+            return {
+              ...collection,
+              experimentIds: [...collection.experimentIds, experimentId],
+              lastModified: Date.now(),
+              // Update thumbnail if not set and experiment has one
+              thumbnail: collection.thumbnail || experiment?.thumbnail || "",
+            };
+          }
+        }
+        return collection;
+      });
+    });
+  };
+
+  const removeExperimentFromCollection = (
+    collectionId: string,
+    experimentId: string
+  ) => {
+    setCollections((prev) => {
+      return prev.map((collection) => {
+        if (collection.id === collectionId) {
+          return {
+            ...collection,
+            experimentIds: collection.experimentIds.filter(
+              (id) => id !== experimentId
+            ),
+            lastModified: Date.now(),
+          };
+        }
+        return collection;
+      });
+    });
+  };
+
+  const deleteCollection = (collectionId: string) => {
+    setCollections((prev) => prev.filter((c) => c.id !== collectionId));
+  };
+
+  const getCollectionById = (id: string) => {
+    return collections.find((c) => c.id === id);
+  };
+
+  const getCollectionsByExperimentId = (experimentId: string) => {
+    return collections.filter((c) => c.experimentIds.includes(experimentId));
+  };
+
   // Provide the context value
   const contextValue: DataContextType = {
     departments,
@@ -183,6 +361,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
     userProgress,
     userBookmarks,
     userNotes,
+    collections,
     updateExperimentProgress,
     toggleBookmark,
     saveNote,
@@ -191,6 +370,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
     getExperimentById,
     getLabsByDepartment,
     getExperimentsByLab,
+    markTabCompleted,
+    createCollection,
+    addExperimentToCollection,
+    removeExperimentFromCollection,
+    deleteCollection,
+    getCollectionById,
+    getCollectionsByExperimentId,
   };
 
   return (

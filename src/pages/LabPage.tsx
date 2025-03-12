@@ -130,16 +130,16 @@ const LabPage = () => {
     <div className="max-w-7xl mx-auto pb-12 p-12">
       {/* Header Section */}
       <div className="mb-8">
-        <div className="text-sm text-gray-500 mb-2">
+        <div className="text-sm text-gray-700 mb-2">
           <Link
             to={`/departments/${deptId}`}
             className="hover:underline flex items-center"
           >
             <Icon icon="mdi:arrow-left" className="mr-1" />
-            Back to {department.name}
+            {department.name}
           </Link>
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex items-baseline justify-between">
           <div className="flex items-baseline">
             <h1 className="text-3xl font-bold text-gray-900 mb-6 mr-6">
               {lab.name}

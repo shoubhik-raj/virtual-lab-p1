@@ -17,6 +17,7 @@ import ContactPage from "./pages/ContactPage";
 import Layout from "./components/Layout";
 import ThemeDebug from "./components/ThemeDebug";
 import { DataProvider } from "./contexts/DataContext";
+import CollectionDetailPage from "./pages/CollectionDetailPage";
 
 function App() {
   const [hasEnteredPortal, setHasEnteredPortal] = useState(false);
@@ -70,6 +71,10 @@ function App() {
             <Route path="notebook" element={<LabNotebookPage />} />
             <Route path="partners" element={<PartnersPage />} />
             <Route path="contact" element={<ContactPage />} />
+            <Route
+              path="collections/:collectionId"
+              element={<CollectionDetailPage />}
+            />
           </Route>
 
           {/* Catch all unmatched routes */}

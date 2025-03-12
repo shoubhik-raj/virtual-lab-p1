@@ -4,20 +4,41 @@ export const announcements = [
     id: 1,
     content:
       "<p>Various projects/ICT initiatives of the Ministry of Education are available on the link given here. <a href='#' style='color: blue;'> Please click here for more details. </a></p>",
+    date: "2 days ago",
   },
   {
     id: 2,
     content:
       "<p>Please click here to see the tutorial for using the Flash-based Labs through Virtual Box.</p>",
+    date: "12 hours ago",
   },
   {
     id: 3,
     content: "<p>To enroll as a Nodal Center, kindly submit the details.</p>",
+    date: "1 week ago",
   },
   {
     id: 4,
     content:
       "<p>To enroll as a Nodal Center, Ministry of Education are available on the link given here. kindly submit the details.</p>",
+    date: "4 days ago",
+  },
+  {
+    id: 5,
+    content:
+      "<p>Various projects/ICT initiatives here. <a href='#' style='color: blue;'> Please click here for more details. </a></p>",
+    date: "1 day ago",
+  },
+  {
+    id: 6,
+    content:
+      "<p>Please click here to see the tutorial for using the Flash-based Labs through Virtual Box.</p>",
+    date: "2 days ago",
+  },
+  {
+    id: 7,
+    content: "<p>To enroll as a Nodal Center, kindly submit the details.</p>",
+    date: "5 days ago",
   },
 ];
 
@@ -69,7 +90,7 @@ export const departments = [
             id: "67cf08d5a57ea12ca9cd1379",
             labId: "67d032be9f7984e0c0fa5006",
             institution: "IIT Delhi",
-            name: "Recusion Dynamic",
+            name: "Recursion Dynamic",
             aim: "<p>No of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of tur</p>",
             theory:
               "<p>No of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of tur</p>",
@@ -447,7 +468,7 @@ export const departments = [
             id: "67cf08d5a57ea12ca9cd1312",
             labId: "67d032be9f7984e0c0fa5007",
             institution: "IIT Bombay",
-            name: "Recusion Dynamic",
+            name: "Recursion Sytem Design",
             aim: "<p>No of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of tur</p>",
             theory:
               "<p>No of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of turns of wire wound around the coilNo of tur</p>",
