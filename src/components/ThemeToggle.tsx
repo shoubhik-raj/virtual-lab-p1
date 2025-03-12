@@ -12,7 +12,7 @@ const ThemeToggle = () => {
 
     // Check system preference if no saved theme
     const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)"
+      "(prefers-color-scheme: light)"
     ).matches;
 
     // Initialize state based on saved theme or system preference
