@@ -18,12 +18,15 @@ const WaveBackground = styled.div`
 `;
 
 const NotebookCard = styled.div`
-  border-radius: 10px;
+  border-radius: 18px;
   overflow: hidden;
   transition: all 0.3s ease;
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
 
   &:hover {
     transform: translateY(-5px);
@@ -88,52 +91,94 @@ const LabNotebookPage = () => {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
   const [filteredExperiments, setFilteredExperiments] = useState<any[]>([]);
 
+  // Define sticky note colors
+  const noteColors = [
+    "bg-yellow-100",
+    "bg-blue-100",
+    "bg-pink-100",
+    "bg-green-100",
+    "bg-purple-100",
+    "bg-red-100",
+    "bg-orange-100",
+    "bg-gray-100",
+    "bg-teal-100",
+    "bg-indigo-100",
+    "bg-lime-100",
+  ];
+
+  // Function to get a random color
+  const getRandomColor = () => {
+    return noteColors[Math.floor(Math.random() * noteColors.length)];
+  };
+
   // Group experiments with notes by department
   useEffect(() => {
+    // First, get all experiments with notes
+    const allExpsWithNotes = Object.keys(stickyNotes)
+      .filter((expId) => stickyNotes[expId]?.length > 0)
+      .map((expId) => {
+        const exp = getExperimentById(expId);
+        return {
+          id: expId,
+          name: exp?.name || "Unknown Experiment",
+          notes: stickyNotes[expId] || [],
+          labId: exp?.labId,
+        };
+      });
+
+    console.log("All experiments with notes:", allExpsWithNotes);
+
     if (!selectedDepartment) {
       // Show all experiments with notes if no department selected
-      const expsWithNotes = Object.keys(stickyNotes)
-        .filter((expId) => stickyNotes[expId]?.length > 0)
-        .map((expId) => {
-          const exp = getExperimentById(expId);
-          return {
-            id: expId,
-            name: exp?.name || "Unknown Experiment",
-            notes: stickyNotes[expId] || [],
-            labId: exp?.labId,
-            departmentId: labs.find((l) => l.id === exp?.labId)?.departmentId,
-          };
-        });
-
-      setFilteredExperiments(expsWithNotes);
+      setFilteredExperiments(allExpsWithNotes);
     } else {
-      // Filter by the selected department
-      const expsWithNotes = Object.keys(stickyNotes)
-        .filter((expId) => {
-          const exp = getExperimentById(expId);
-          const lab = labs.find((l) => l.id === exp?.labId);
-          return (
-            lab?.departmentId === parseInt(selectedDepartment) &&
-            stickyNotes[expId]?.length > 0
-          );
-        })
-        .map((expId) => {
-          const exp = getExperimentById(expId);
-          return {
-            id: expId,
-            name: exp?.name || "Unknown Experiment",
-            notes: stickyNotes[expId] || [],
-            labId: exp?.labId,
-            departmentId: labs.find((l) => l.id === exp?.labId)?.departmentId,
-          };
-        });
+      console.log("Selected department ID:", selectedDepartment);
 
-      setFilteredExperiments(expsWithNotes);
+      // Print all departments to debug
+      console.log("All departments:", departments);
+
+      // Find the lab IDs for each experiment
+      const expLabMap = allExpsWithNotes.map((exp) => ({
+        expId: exp.id,
+        labId: exp.labId,
+        expName: exp.name,
+      }));
+      console.log("Experiment-Lab mapping:", expLabMap);
+
+      // Print all labs
+      console.log("All labs:", labs);
+
+      // Let's try a simpler approach for now - show all experiments
+      // This will help us determine if the filtering itself is the issue
+      setFilteredExperiments(allExpsWithNotes);
+
+      /* 
+      // Original approach that's not working:
+      const departmentId = parseInt(selectedDepartment);
+      const selectedDept = departments.find((d) => d.id === departmentId);
+
+      // If we found the department, filter experiments by labs within that department
+      if (selectedDept && selectedDept.labs) {
+        const filteredExps = allExpsWithNotes.filter((exp) =>
+          selectedDept.labs.includes(exp.labId)
+        );
+        setFilteredExperiments(filteredExps);
+      } else {
+        // Fallback - no department or no labs in department
+        setFilteredExperiments([]);
+      }
+      */
     }
-  }, [selectedDepartment, stickyNotes, getExperimentById, labs]);
+  }, [selectedDepartment, stickyNotes, getExperimentById, departments, labs]);
+
+  // Debug function to help understand data types
+  useEffect(() => {
+    console.log("Current filtered experiments:", filteredExperiments);
+  }, [filteredExperiments]);
 
   const getLabName = (labId: string) => {
-    const lab = labs.find((l) => l.id === labId);
+    // Handle potential type mismatch
+    const lab = labs.find((l) => String(l.id) === String(labId));
     return lab?.name || "Unknown Lab";
   };
 
@@ -185,7 +230,7 @@ const LabNotebookPage = () => {
                   value={selectedDepartment}
                   onChange={(e) => setSelectedDepartment(e.target.value)}
                 >
-                  <option value="">Chemical Engineering</option>
+                  <option value="">Select Department</option>
                   {departments.map((dept) => (
                     <option key={dept.id} value={dept.id}>
                       {dept.name}
@@ -317,50 +362,53 @@ const LabNotebookPage = () => {
               key={exp.id}
               className="block h-full"
             >
-              <NotebookCard className="bg-white border border-gray-200">
-                <div className="p-5">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              <NotebookCard>
+                <div className="p-6">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-1">
                     {exp.name}
                   </h3>
-                  <LabBadge>{getLabName(exp.labId)}</LabBadge>
 
-                  {/* Preview of sticky notes */}
-                  <div className="mt-6 space-y-3">
-                    {exp.notes.slice(0, 2).map((note: any) => (
-                      <div
-                        key={note.id}
-                        className="p-4 rounded-md text-sm bg-gray-50"
-                      >
-                        <p className="text-gray-700 line-clamp-2">
-                          {note.text.substring(0, 120)}
-                          {note.text.length > 120 && "..."}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-auto p-4 bg-gray-50 border-t border-gray-200">
-                  {exp.notes.length > 2 && (
-                    <p className="text-sm text-gray-500">
-                      +{exp.notes.length - 2} more notes
-                    </p>
-                  )}
-                  <div className="flex justify-between items-center mt-1">
-                    <span className="text-blue-500 text-sm font-medium">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500 text-xs">
                       {exp.notes.length}{" "}
                       {exp.notes.length === 1 ? "note" : "notes"}
                     </span>
-                    <span className="text-blue-500 flex items-center text-sm">
-                      View <Icon icon="mdi:arrow-right" className="ml-1" />
-                    </span>
+                    <Icon
+                      icon="mdi:arrow-right"
+                      className="ml-1 text-md text-gray-500"
+                    />
                   </div>
+                  {/* Preview of sticky notes */}
+                  <div className="flex align-center justify-center gap-2 mt-6">
+                    {exp.notes.slice(0, 3).map((note: any) => {
+                      const randomColor = getRandomColor();
+                      return (
+                        <div
+                          key={note.id}
+                          className={`p-4 h-24 w-24 text-gray-500 text-sm ${randomColor} shadow-sm`}
+                          style={{ transform: "rotate(-0.5deg)" }}
+                        >
+                          <p className="text-gray-700 line-clamp-2">
+                            {note.text.substring(0, 120)}
+                            {note.text.length > 120 && "..."}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="mt-auto p-5  border-t border-gray-100">
+                  {/* <LabBadge>{getLabName(exp.labId)}</LabBadge> */}
+                  <p className="p-4 text-center text-gray-800 bg-blue-100 w-full rounded-xl ">
+                    {getLabName(exp.labId)}
+                  </p>
                 </div>
               </NotebookCard>
             </Link>
           ))
         ) : (
-          <div className="col-span-full bg-white border border-gray-200 rounded-lg p-10 text-center">
+          <div className="col-span-full bg-white rounded-lg p-10 text-center shadow-sm border border-gray-100">
             <div className="flex flex-col items-center justify-center">
               <svg
                 width="323"
@@ -368,7 +416,7 @@ const LabNotebookPage = () => {
                 viewBox="0 0 323 114"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                className="w-64 h-32 mb-4"
+                className="w-64 h-32 mb-4 opacity-80"
               >
                 <mask
                   id="mask0_204_12103"
@@ -382,7 +430,74 @@ const LabNotebookPage = () => {
                   <rect width="323" height="114" rx="18" fill="#F1F5F9" />
                 </mask>
                 <g mask="url(#mask0_204_12103)">
-                  {/* SVG paths from the provided SVG... */}
+                  <path
+                    d="M303.557 58.6173C303.557 52.9705 298.979 48.3928 293.332 48.3928H228.577C222.93 48.3928 218.352 52.9705 218.352 58.6173V114H303.557V58.6173Z"
+                    fill="#4A77FD"
+                  />
+                  <path
+                    fill-rule="evenodd"
+                    clip-rule="evenodd"
+                    d="M54.9273 40C58.6705 40 62.1145 42.0455 63.9055 45.3325L65.2416 47.7846C66.9932 50.9994 70.3616 53 74.0227 53H131.775C137.422 53 142 57.5777 142 63.2245V106C142 111.523 137.523 116 132 116H103.549C103.036 116 102.71 116.549 102.955 117C103.201 117.451 102.874 118 102.361 118H27C25.8954 118 25 117.105 25 116V63.2245V50.2245C25 44.5777 29.5777 40 35.2245 40H54.9273Z"
+                    fill="#638AFF"
+                  />
+                  <path
+                    fill-rule="evenodd"
+                    clip-rule="evenodd"
+                    d="M112.073 36C108.329 36 104.885 38.0455 103.094 41.3325L92.4956 60.7846C90.7439 63.9994 87.3755 66 83.7145 66H35.2245C29.5777 66 25 70.5777 25 76.2245V119C25 124.523 29.4771 129 35 129H212C217.523 129 222 124.523 222 119V114V76.2245V46.2245C222 40.5777 217.422 36 211.775 36H112.073Z"
+                    fill="#4A77FD"
+                  />
+                  <path
+                    d="M138 10.903C138 5.25614 142.578 0.678467 148.225 0.678467H261.546C267.193 0.678467 271.771 5.25613 271.771 10.903V114H138V10.903Z"
+                    fill="#638AFF"
+                  />
+                  <rect
+                    x="155.041"
+                    y="49.2449"
+                    width="99.6889"
+                    height="6.81634"
+                    rx="3.40817"
+                    fill="#8EAAFA"
+                  />
+                  <rect
+                    x="155.041"
+                    y="66.2856"
+                    width="99.6889"
+                    height="6.81634"
+                    rx="3.40817"
+                    fill="#8EAAFA"
+                  />
+                  <rect
+                    x="155.041"
+                    y="83.3267"
+                    width="45.1582"
+                    height="6.81634"
+                    rx="3.40817"
+                    fill="#8EAAFA"
+                  />
+                  <rect
+                    x="75"
+                    y="95.3267"
+                    width="45.1582"
+                    height="6.81634"
+                    rx="3.40817"
+                    fill="#8EAAFA"
+                  />
+                  <rect
+                    x="36"
+                    y="50"
+                    width="18"
+                    height="7"
+                    rx="3.5"
+                    fill="white"
+                  />
+                  <rect
+                    x="155"
+                    y="21"
+                    width="67"
+                    height="11"
+                    rx="2"
+                    fill="#8EAAFA"
+                  />
                 </g>
               </svg>
               <h3 className="text-lg font-medium text-gray-700 mb-2">

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useData } from "../contexts/DataContext";
 import { Icon } from "@iconify/react";
-import ReactQuill from "react-quill"; // You'll need to install this: npm install react-quill
+import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
 // StickyNote component specifically for the open page
@@ -24,13 +24,13 @@ const StickyNote = ({
   };
 
   return (
-    <div className={`${note.color} p-6 mb-4 rounded-lg shadow-md relative`}>
+    <div className={`${note.color} p-7 mb-4 shadow-lg relative min-h-36`}>
       {isEditing ? (
         <>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full h-32 p-2 rounded bg-white bg-opacity-70 focus:outline-none resize-none"
+            className="w-full h-32 p-2 bg-transparent bg-opacity-70 focus:outline-none resize-none"
             autoFocus
           />
           <div className="flex justify-end mt-2">
@@ -50,7 +50,7 @@ const StickyNote = ({
         </>
       ) : (
         <>
-          <div className="pr-12">
+          <div className="pr-8">
             <p className="text-gray-800">{text}</p>
           </div>
           <div className="absolute top-3 right-3 flex space-x-2">
@@ -83,14 +83,21 @@ const LabNoteOpenPage = () => {
     deleteStickyNote,
     saveAdditionalNotes,
     getExperimentAdditionalNotes,
+    departments,
   } = useData();
 
   const [editorContent, setEditorContent] = useState("");
   const [notes, setNotes] = useState<any[]>([]);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   const experiment = getExperimentById(experimentId || "");
   const lab = experiment ? getLabById(experiment.labId) : null;
+
+  // Find the correct department for this lab
+  const department = lab
+    ? departments.find((d) => d.labs.some((labId) => labId === lab.id))
+    : null;
 
   // Load notes and editor content
   useEffect(() => {
@@ -100,17 +107,16 @@ const LabNoteOpenPage = () => {
     }
   }, [experimentId, getExperimentStickyNotes, getExperimentAdditionalNotes]);
 
-  // Real-time saving for Quill editor
   useEffect(() => {
     const saveTimer = setTimeout(() => {
-      if (editorContent && experimentId) {
+      if (editorContent && experimentId && isEditing) {
         saveAdditionalNotes(experimentId, editorContent);
         setLastSaved(new Date());
       }
     }, 1000);
 
     return () => clearTimeout(saveTimer);
-  }, [editorContent, experimentId, saveAdditionalNotes]);
+  }, [editorContent, experimentId, saveAdditionalNotes, isEditing]);
 
   const handleUpdateNote = (noteId: string, text: string) => {
     if (experimentId) {
@@ -126,6 +132,22 @@ const LabNoteOpenPage = () => {
     }
   };
 
+  const toggleEditor = () => {
+    if (!isEditing && experimentId) {
+      // Make sure we have the latest content when opening the editor
+      setEditorContent(getExperimentAdditionalNotes(experimentId));
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleSaveAndClose = () => {
+    if (experimentId) {
+      saveAdditionalNotes(experimentId, editorContent);
+      setLastSaved(new Date());
+      setIsEditing(false);
+    }
+  };
+
   if (!experiment) {
     return (
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -137,7 +159,7 @@ const LabNoteOpenPage = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto p-8">
       {/* Header */}
       <div className="mb-8">
         <div className="text-sm text-gray-600 mb-2">
@@ -163,7 +185,7 @@ const LabNoteOpenPage = () => {
             </h2>
 
             {notes.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {notes.map((note) => (
                   <StickyNote
                     key={note.id}
@@ -186,30 +208,61 @@ const LabNoteOpenPage = () => {
               <h2 className="text-xl font-medium text-gray-800">
                 Additional Notes
               </h2>
-              {lastSaved && (
-                <span className="text-sm text-gray-500">
-                  Last saved: {lastSaved.toLocaleTimeString()}
-                </span>
-              )}
+              <div className="flex items-center">
+                {isEditing ? (
+                  <button
+                    onClick={handleSaveAndClose}
+                    className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded flex items-center text-sm"
+                  >
+                    <Icon icon="mdi:content-save" className="mr-1" />
+                    Save & Close
+                  </button>
+                ) : (
+                  <button
+                    onClick={toggleEditor}
+                    className="text-gray-600 hover:text-blue-600 flex items-center text-sm"
+                  >
+                    <Icon icon="mdi:pencil" className="mr-1" />
+                    Edit Notes
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="border border-gray-300 rounded-lg overflow-hidden">
-              <ReactQuill
-                theme="snow"
-                value={editorContent}
-                onChange={setEditorContent}
-                className="h-64"
-                modules={{
-                  toolbar: [
-                    [{ header: [1, 2, 3, false] }],
-                    ["bold", "italic", "underline", "strike"],
-                    [{ list: "ordered" }, { list: "bullet" }],
-                    ["link", "image"],
-                    ["clean"],
-                  ],
-                }}
-              />
-            </div>
+            {isEditing ? (
+              // Show editor when in editing mode
+              <div className="border border-gray-300 rounded-lg overflow-hidden">
+                <ReactQuill
+                  theme="snow"
+                  value={editorContent}
+                  onChange={setEditorContent}
+                  className="h-64"
+                  modules={{
+                    toolbar: [
+                      [{ header: [1, 2, 3, false] }],
+                      ["bold", "italic", "underline", "strike"],
+                      [{ list: "ordered" }, { list: "bullet" }],
+                      ["link", "image"],
+                      ["clean"],
+                    ],
+                  }}
+                />
+              </div>
+            ) : (
+              // Show rendered content when not editing
+              <div className="border border-gray-200 rounded-lg p-6 min-h-[200px] bg-white shadow-sm">
+                {editorContent ? (
+                  <div
+                    className="prose max-w-none"
+                    dangerouslySetInnerHTML={{ __html: editorContent }}
+                  />
+                ) : (
+                  <p className="text-gray-500 italic">
+                    No additional notes yet. Click "Edit Notes" to add some.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -232,7 +285,9 @@ const LabNoteOpenPage = () => {
             )}
 
             <Link
-              to={`/departments/${lab?.departmentId}/labs/${experiment.labId}/experiments/${experiment.id}`}
+              to={`/departments/${department?.id || "1"}/labs/${
+                experiment.labId
+              }/experiments/${experiment.id}`}
               className="inline-flex items-center text-blue-500 hover:text-blue-700"
             >
               Go to Experiment <Icon icon="mdi:arrow-right" className="ml-1" />
